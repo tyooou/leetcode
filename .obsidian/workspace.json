@@ -1,0 +1,268 @@
+{
+  "main": {
+    "id": "44af48575aaca167",
+    "type": "split",
+    "children": [
+      {
+        "id": "5390ca3bbdff02cf",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "9e29ed0a1a1e14a8",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "2264. Largest 3-Same-Digit Number in String.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2264. Largest 3-Same-Digit Number in String"
+            }
+          },
+          {
+            "id": "51e7cabf66622742",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "2264. Largest 3-Same-Digit Number in String.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "2264. Largest 3-Same-Digit Number in String"
+            }
+          },
+          {
+            "id": "c5ba2520a88c7c87",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "1323. Maximum 69 Numbered.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "1323. Maximum 69 Numbered"
+            }
+          },
+          {
+            "id": "d5010a7d57973650",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "Untitled.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "Untitled"
+            }
+          },
+          {
+            "id": "be4e9b3f27ad0afc",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "118. Pascal's Triangle.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "118. Pascal's Triangle"
+            }
+          },
+          {
+            "id": "3fe1fde96be4673c",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "118. Pascal's Triangle.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "118. Pascal's Triangle"
+            }
+          },
+          {
+            "id": "eb954b96d4c25ed3",
+            "type": "leaf",
+            "state": {
+              "type": "markdown",
+              "state": {
+                "file": "119. Pascal's Triangle II.md",
+                "mode": "source",
+                "source": false
+              },
+              "icon": "lucide-file",
+              "title": "119. Pascal's Triangle II"
+            }
+          }
+        ],
+        "currentTab": 6
+      }
+    ],
+    "direction": "vertical"
+  },
+  "left": {
+    "id": "f8adedf52277c36c",
+    "type": "split",
+    "children": [
+      {
+        "id": "4046e2881118c161",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "c66cf28d02a2d979",
+            "type": "leaf",
+            "state": {
+              "type": "file-explorer",
+              "state": {
+                "sortOrder": "alphabetical",
+                "autoReveal": false
+              },
+              "icon": "lucide-folder-closed",
+              "title": "Files"
+            }
+          },
+          {
+            "id": "f6f15532c9028bf6",
+            "type": "leaf",
+            "state": {
+              "type": "search",
+              "state": {
+                "query": "",
+                "matchingCase": false,
+                "explainSearch": false,
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical"
+              },
+              "icon": "lucide-search",
+              "title": "Search"
+            }
+          },
+          {
+            "id": "6558a9e8c565ab9a",
+            "type": "leaf",
+            "state": {
+              "type": "bookmarks",
+              "state": {},
+              "icon": "lucide-bookmark",
+              "title": "Bookmarks"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 200
+  },
+  "right": {
+    "id": "7c79701d8c77360c",
+    "type": "split",
+    "children": [
+      {
+        "id": "ad12a801044fa4bc",
+        "type": "tabs",
+        "children": [
+          {
+            "id": "20be3c43d4dbe085",
+            "type": "leaf",
+            "state": {
+              "type": "backlink",
+              "state": {
+                "file": "2264. Largest 3-Same-Digit Number in String 1.md",
+                "collapseAll": false,
+                "extraContext": false,
+                "sortOrder": "alphabetical",
+                "showSearch": false,
+                "searchQuery": "",
+                "backlinkCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-coming-in",
+              "title": "Backlinks for 2264. Largest 3-Same-Digit Number in String 1"
+            }
+          },
+          {
+            "id": "9143b10c5df75847",
+            "type": "leaf",
+            "state": {
+              "type": "outgoing-link",
+              "state": {
+                "file": "2264. Largest 3-Same-Digit Number in String 1.md",
+                "linksCollapsed": false,
+                "unlinkedCollapsed": true
+              },
+              "icon": "links-going-out",
+              "title": "Outgoing links from 2264. Largest 3-Same-Digit Number in String 1"
+            }
+          },
+          {
+            "id": "c0dd43dbf9821a15",
+            "type": "leaf",
+            "state": {
+              "type": "tag",
+              "state": {
+                "sortOrder": "frequency",
+                "useHierarchy": true,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-tags",
+              "title": "Tags"
+            }
+          },
+          {
+            "id": "4dffcff564afe5d8",
+            "type": "leaf",
+            "state": {
+              "type": "outline",
+              "state": {
+                "file": "2264. Largest 3-Same-Digit Number in String 1.md",
+                "followCursor": false,
+                "showSearch": false,
+                "searchQuery": ""
+              },
+              "icon": "lucide-list",
+              "title": "Outline of 2264. Largest 3-Same-Digit Number in String 1"
+            }
+          }
+        ]
+      }
+    ],
+    "direction": "horizontal",
+    "width": 300,
+    "collapsed": true
+  },
+  "left-ribbon": {
+    "hiddenItems": {
+      "daily-notes:Open today's daily note": false,
+      "bases:Create new base": false,
+      "switcher:Open quick switcher": false,
+      "graph:Open graph view": false,
+      "canvas:Create new canvas": false,
+      "templates:Insert template": false,
+      "command-palette:Open command palette": false
+    }
+  },
+  "active": "eb954b96d4c25ed3",
+  "lastOpenFiles": [
+    "Untitled.md",
+    "119. Pascal's Triangle II.md",
+    "118. Pascal's Triangle.md",
+    "Untitled 1.md",
+    "342. Power of Four.md",
+    "2264. Largest 3-Same-Digit Number in String 1.md",
+    "2264. Largest 3-Same-Digit Number in String.md",
+    "1323. Maximum 69 Numbered.md"
+  ]
+}
