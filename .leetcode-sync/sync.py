@@ -340,7 +340,8 @@ def build_note(question, detail, submission, cfg, analysis=None):
     tags_yaml = ", ".join(tag_slugs)
     slug = submission["titleSlug"]
     link = f"https://leetcode.com/problems/{slug}/description/"
-    iso_date = datetime.fromtimestamp(int(submission["timestamp"])).strftime("%Y-%m-%d")
+    sub_dt = datetime.fromtimestamp(int(submission["timestamp"]))
+    iso_date = sub_dt.strftime("%Y-%m-%d")
     intro, sections = split_problem_sections(question.get("content", ""))
     hints = question.get("hints") or []
     lang_name = (detail.get("lang") or {}).get("name", "").lower()
@@ -418,14 +419,22 @@ def build_note(question, detail, submission, cfg, analysis=None):
     ]
     body = "\n".join(parts)
     filename = f"{frontend_id}. {title}.md"
-    return filename, body
+    rel_path = os.path.join(sub_dt.strftime("%Y"), sub_dt.strftime("%m"), filename)
+    return rel_path, body
+
+
+SKIP_DIRS = {".git", ".obsidian", ".leetcode-sync"}
 
 
 def existing_note_for(frontend_id, vault_dir):
+    """Search the whole vault (now organized into YYYY/MM subfolders) for a
+    note already covering this problem, so we never create a duplicate."""
     prefix = f"{frontend_id}. "
-    for fname in os.listdir(vault_dir):
-        if fname.startswith(prefix) and fname.endswith(".md"):
-            return fname
+    for root, dirs, files in os.walk(vault_dir):
+        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
+        for fname in files:
+            if fname.startswith(prefix) and fname.endswith(".md"):
+                return os.path.relpath(os.path.join(root, fname), vault_dir)
     return None
 
 
@@ -472,6 +481,7 @@ def main():
         analysis = generate_analysis(question, detail.get("code", ""), fence_lang, cfg)
         filename, body = build_note(question, detail, sub, cfg, analysis)
         path = os.path.join(VAULT_DIR, filename)
+        os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
             f.write(body)
         print(f"Wrote {filename}")
