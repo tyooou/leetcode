@@ -589,7 +589,23 @@ def regenerate_readme(vault_dir, cfg):
 
 <samp><sub>Last updated: {datetime.now().strftime('%Y-%m-%d %H:%M')}</sub></samp>
 """
-    with open(os.path.join(vault_dir, "README.md"), "w") as f:
+    readme_path = os.path.join(vault_dir, "README.md")
+
+    # The "Last updated" timestamp changes on every run even when nothing
+    # else did, which would otherwise defeat git_sync's "nothing changed"
+    # check and spam a new commit daily. Only actually rewrite the file
+    # (and thus let it show up as a git change) if the content differs
+    # once that timestamp line is ignored.
+    def strip_timestamp(text):
+        return re.sub(r"Last updated: \d{4}-\d{2}-\d{2} \d{2}:\d{2}", "Last updated: X", text)
+
+    if os.path.exists(readme_path):
+        with open(readme_path) as f:
+            existing = f.read()
+        if strip_timestamp(existing) == strip_timestamp(readme):
+            return [heatmap_rel]  # README unchanged; heatmap may still differ
+
+    with open(readme_path, "w") as f:
         f.write(readme)
 
     return ["README.md", heatmap_rel]
