@@ -97,12 +97,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "119. Pascal's Triangle II.md",
-                "mode": "source",
+                "file": "3838. Weighted Word Mapping.md",
+                "mode": "preview",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "119. Pascal's Triangle II"
+              "title": "3838. Weighted Word Mapping"
             }
           }
         ],
@@ -256,13 +256,31 @@
   },
   "active": "eb954b96d4c25ed3",
   "lastOpenFiles": [
-    "Untitled.md",
+    "3731. Find Missing Elements.md",
+    "3558. Number of Ways to Assign Edge Weights I.md",
+    "3014. Minimum Number of Pushes to Type Word I.md",
+    "2130. Maximum Twin Sum of a Linked List.md",
+    "1979. Find Greatest Common Divisor of Array.md",
+    "1732. Find the Highest Altitude.md",
+    "1323. Maximum 69 Numbered.md",
+    "1840. Maximum Building Height.md",
+    "3612. Process String with Special Operations I.md",
+    "3559. Number of Ways to Assign Edge Weights II.md",
+    "3016. Minimum Number of Pushes to Type Word II.md",
+    "3838. Weighted Word Mapping.md",
+    "3691. Maximum Total Subarray Value II.md",
+    "3689. Maximum Total Subarray Value I.md",
+    "1833. Maximum Ice Cream Bars.md",
     "119. Pascal's Triangle II.md",
-    "118. Pascal's Triangle.md",
-    "Untitled 1.md",
-    "342. Power of Four.md",
-    "2264. Largest 3-Same-Digit Number in String 1.md",
+    "486. Predict the Winner.md",
+    "1189. Maximum Number of Balloons.md",
+    "1331. Rank Transform of an Array.md",
+    "1406. Stone Game III.md",
+    "2095. Delete the Middle Node of a Linked List.md",
     "2264. Largest 3-Same-Digit Number in String.md",
-    "1323. Maximum 69 Numbered.md"
+    "342. Power of Four.md",
+    "_PREVIEW Two Sum.md",
+    "118. Pascal's Triangle.md",
+    "2264. Largest 3-Same-Digit Number in String 1.md"
   ]
 }

@@ -1,3 +1,4 @@
 .leetcode-sync/config.json
 .git-credentials
 .DS_Store
+.leetcode-sync/__pycache__/

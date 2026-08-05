@@ -40,6 +40,9 @@ GRAPHQL_URL = "https://leetcode.com/graphql"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
+ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
+ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
+
 LANG_EXT = {
     "python": "python", "python3": "python", "java": "java", "c": "c",
     "cpp": "cpp", "c++": "cpp", "csharp": "csharp", "javascript": "javascript",
@@ -66,6 +69,10 @@ def load_config():
                if not cfg.get(k) or cfg[k].startswith("PASTE_")]
     if missing:
         die(f"config.json is missing/unfilled values for: {', '.join(missing)}")
+    api_key = cfg.get("anthropic_api_key", "")
+    if not api_key or api_key.startswith("PASTE_"):
+        print("NOTE: no anthropic_api_key set -- Reasoning/Complexity will be "
+              "left blank for you to fill in by hand.")
     return cfg
 
 
@@ -150,6 +157,7 @@ def fetch_question(title_slug, cfg):
         title
         difficulty
         content
+        hints
         topicTags { name }
       }
     }"""
@@ -158,6 +166,72 @@ def fetch_question(title_slug, cfg):
     if q is None:
         die(f"Could not fetch question data for '{title_slug}'.")
     return q
+
+
+def generate_analysis(question, code, fence_lang, cfg):
+    """Ask Claude for a short reasoning summary + time/space complexity.
+    Returns None (leaving the note sections blank) if no API key is
+    configured or the call/parse fails for any reason -- this is a nice-to-
+    have and must never break the sync."""
+    api_key = cfg.get("anthropic_api_key")
+    if not api_key or api_key.startswith("PASTE_"):
+        return None
+
+    summary = html_to_markdown(question.get("content", ""))[:1500]
+    prompt = f"""You are annotating a LeetCode solution for a personal study log.
+Given the problem and the accepted solution code below, respond with ONLY a
+JSON object (no markdown code fences, no commentary) with exactly these keys:
+- "reasoning_steps": an array of 2-5 short plain-English strings, each one
+  step of the approach used in the code. This becomes a numbered list, so
+  keep each step self-contained and specific to this code (not generic).
+- "key_insight": one punchy sentence (max ~20 words) naming the single core
+  trick or observation that makes this approach work -- the thing worth
+  remembering if you saw this problem again in six months.
+- "time_complexity": a short string like "O(n)"
+- "space_complexity": a short string like "O(1)"
+
+Problem: {question.get('title')} ({question.get('difficulty')})
+Problem summary:
+{summary}
+
+Submitted solution ({fence_lang}):
+{code}
+"""
+    body = json.dumps({
+        "model": ANTHROPIC_MODEL,
+        "max_tokens": 500,
+        "messages": [{"role": "user", "content": prompt}],
+    }).encode()
+    headers = {
+        "Content-Type": "application/json",
+        "x-api-key": api_key,
+        "anthropic-version": "2023-06-01",
+    }
+    req = urllib.request.Request(ANTHROPIC_URL, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            data = json.loads(resp.read().decode())
+    except urllib.error.HTTPError as e:
+        detail = e.read().decode(errors="replace")[:500]
+        print(f"WARNING: AI analysis failed: HTTP {e.code}: {detail}\n"
+              f"Leaving Reasoning/Complexity blank for you to fill in.", file=sys.stderr)
+        return None
+    except Exception as e:
+        print(f"WARNING: AI analysis request failed ({e}); leaving "
+              f"Reasoning/Complexity blank for you to fill in.", file=sys.stderr)
+        return None
+
+    try:
+        text = data["content"][0]["text"].strip()
+        text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
+        parsed = json.loads(text)
+        if not parsed.get("reasoning_steps"):
+            return None
+        return parsed
+    except Exception as e:
+        print(f"WARNING: AI response unparseable ({e}); raw response: "
+              f"{json.dumps(data)[:500]}\nLeaving Reasoning/Complexity blank.", file=sys.stderr)
+        return None
 
 
 def html_to_markdown(html):
@@ -182,49 +256,167 @@ def html_to_markdown(html):
     return text.strip()
 
 
+SECTION_HEADING_RE = re.compile(
+    r'<p>\s*<strong[^>]*>\s*(Example\s+\d+|Constraints|Follow[\s-]?[Uu]p)\s*:?\s*</strong>\s*</p>',
+    re.IGNORECASE)
+
+
+def split_problem_sections(html):
+    """Split LeetCode's question content HTML into intro text + a list of
+    (label, raw_html) sections for each 'Example N:' / 'Constraints:' /
+    'Follow up:' heading LeetCode renders as its own block. Section bodies
+    are left as raw HTML -- the caller decides how to render each one."""
+    if not html:
+        return "", []
+    matches = list(SECTION_HEADING_RE.finditer(html))
+    if not matches:
+        return html_to_markdown(html), []
+    intro = html_to_markdown(html[:matches[0].start()])
+    sections = []
+    for i, m in enumerate(matches):
+        label = re.sub(r"\s+", " ", m.group(1)).strip()
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(html)
+        sections.append((label, html[start:end]))
+    return intro, sections
+
+
+EXAMPLE_LABEL_RE = re.compile(
+    r'(?is)<strong>\s*(Input|Output|Explanation|Note)\s*:?\s*</strong>\s*')
+
+
+def format_example(raw_html, fence_lang):
+    """Render an Example block as separate Input / Output / Explanation
+    code fences, matching LeetCode's own layout, instead of one flat
+    paragraph."""
+    pre_match = re.search(r"(?is)<pre>(.*?)</pre>", raw_html)
+    if not pre_match:
+        return html_to_markdown(raw_html)
+    pre_content = pre_match.group(1)
+    matches = list(EXAMPLE_LABEL_RE.finditer(pre_content))
+    if not matches:
+        return html_to_markdown(raw_html)
+    blocks = []
+    for i, m in enumerate(matches):
+        label = m.group(1).strip().capitalize()
+        start = m.end()
+        end = matches[i + 1].start() if i + 1 < len(matches) else len(pre_content)
+        value = html_to_markdown(pre_content[start:end]).strip()
+        blocks.append(f"**{label}:**\n\n```{fence_lang}\n{value}\n```")
+    return "\n\n".join(blocks)
+
+
 def safe_title(title):
     # Strip characters illegal in filenames on macOS/most filesystems.
     return re.sub(r'[\\/:*?"<>|]', "", title).strip()
 
 
-def build_note(question, detail, submission, cfg):
+def kebab(text):
+    return re.sub(r"[^a-z0-9-]+", "-", text.lower()).strip("-")
+
+
+def to_callout(text, kind, title, fold=None):
+    """Wrap text in an Obsidian callout block. fold: None (not foldable),
+    '-' (collapsed), '+' (expanded/foldable)."""
+    marker = f"[!{kind}]{fold or ''} {title}".rstrip()
+    lines = text.split("\n") if text else [""]
+    quoted = "\n".join(f"> {line}".rstrip() if line else ">" for line in lines)
+    return f"> {marker}\n{quoted}"
+
+
+SECTION_CALLOUT = {
+    "constraints": ("warning", "Constraints"),
+    "follow up": ("info", "Follow up"),
+    "followup": ("info", "Follow up"),
+}
+
+
+def build_note(question, detail, submission, cfg, analysis=None):
     frontend_id = question["questionFrontendId"]
     title = safe_title(question["title"])
     difficulty = question["difficulty"]
-    tags = ", ".join(t["name"] for t in question.get("topicTags", []))
+    tag_names = [t["name"] for t in question.get("topicTags", [])]
+    tag_slugs = [kebab(t) for t in tag_names]
+    tags_yaml = ", ".join(tag_slugs)
     slug = submission["titleSlug"]
-    date_str = datetime.fromtimestamp(int(submission["timestamp"])).strftime("%d/%m/%Y")
-    summary = html_to_markdown(question.get("content", ""))
+    link = f"https://leetcode.com/problems/{slug}/description/"
+    iso_date = datetime.fromtimestamp(int(submission["timestamp"])).strftime("%Y-%m-%d")
+    intro, sections = split_problem_sections(question.get("content", ""))
+    hints = question.get("hints") or []
     lang_name = (detail.get("lang") or {}).get("name", "").lower()
     fence_lang = LANG_EXT.get(lang_name, lang_name or "text")
     code = detail.get("code", "")
+    runtime = detail.get("runtimeDisplay") or "—"
+    memory = detail.get("memoryDisplay") or "—"
 
-    body = f"""Problem link: https://leetcode.com/problems/{slug}/description/
-Difficulty: {difficulty}
-Date: {date_str}
-Tags: {tags}
+    if analysis and analysis.get("reasoning_steps"):
+        reasoning = "\n".join(f"{i + 1}. {step}" for i, step in
+                               enumerate(analysis["reasoning_steps"]))
+        if analysis.get("key_insight"):
+            reasoning += f"\n\n**Key insight:** {analysis['key_insight']}"
+    else:
+        reasoning = "*(fill in)*"
 
-## Problem Summary
-{summary}
+    time_c = (analysis or {}).get("time_complexity") or "*(fill in)*"
+    space_c = (analysis or {}).get("space_complexity") or "*(fill in)*"
 
-## Submission
+    stats_table = (
+        "| Runtime | Memory | Time | Space |\n"
+        "|---|---|---|---|\n"
+        f"| `{runtime}` | `{memory}` | `{time_c}` | `{space_c}` |"
+    )
+    submission_block = f"{stats_table}\n\n```{fence_lang}\n{code}\n```"
 
-```{fence_lang}
-{code}
-```
+    parts = [
+        "---",
+        f"link: {link}",
+        f"difficulty: {difficulty}",
+        f"date: {iso_date}",
+        f"tags: [{tags_yaml}]",
+        f'runtime: "{runtime}"',
+        f'memory: "{memory}"',
+        "---",
+        "",
+        "### Problem Statement:",
+        "",
+        intro,
+        "",
+    ]
 
-## Reasoning
+    for label, raw_html in sections:
+        norm = label.lower()
+        if norm.startswith("example"):
+            kind, heading = "example", label
+            body_text = format_example(raw_html, fence_lang)
+        else:
+            kind, heading = SECTION_CALLOUT.get(norm, ("note", label))
+            body_text = html_to_markdown(raw_html)
+        parts.append(to_callout(body_text, kind, heading, fold="-"))
+        parts.append("")
 
-*(fill in)*
+    if hints:
+        parts += ["---", "", "### Hints:", ""]
+        for i, hint in enumerate(hints, 1):
+            parts.append(to_callout(html_to_markdown(hint), "success", f"Hint {i}", fold="-"))
+            parts.append("")
 
-## Notes
-
-*(fill in)*
-
-## Complexity
-**Time:**
-**Space:**
-"""
+    parts += [
+        "---",
+        "",
+        "### Submission:",
+        "",
+        to_callout(submission_block, "example", "Submission", fold="+"),
+        "",
+        to_callout(reasoning, "success", "Reasoning", fold="-"),
+        "",
+        "---",
+        "",
+        "### Notes:",
+        "",
+        "*(fill in)*",
+        "",
+    ]
+    body = "\n".join(parts)
     filename = f"{frontend_id}. {title}.md"
     return filename, body
 
@@ -275,7 +467,10 @@ def main():
             continue
 
         detail = fetch_submission_detail(sub["id"], cfg)
-        filename, body = build_note(question, detail, sub, cfg)
+        lang_name = (detail.get("lang") or {}).get("name", "").lower()
+        fence_lang = LANG_EXT.get(lang_name, lang_name or "text")
+        analysis = generate_analysis(question, detail.get("code", ""), fence_lang, cfg)
+        filename, body = build_note(question, detail, sub, cfg, analysis)
         path = os.path.join(VAULT_DIR, filename)
         with open(path, "w") as f:
             f.write(body)
