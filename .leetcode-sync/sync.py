@@ -439,42 +439,78 @@ def existing_note_for(frontend_id, vault_dir):
     return None
 
 
-FRONTMATTER_RE = re.compile(r"^---\n(.*?)\n---", re.DOTALL)
+def fetch_leetcode_profile_stats(cfg):
+    """Pull real stats straight from your LeetCode account -- submission
+    calendar (for the heatmap), total solved by difficulty, and tag
+    breakdown -- rather than approximating them from whatever's synced into
+    the vault. Reflects your actual LeetCode activity, including problems
+    solved outside this tool."""
+    username = cfg["leetcode_username"]
+    now = datetime.now()
 
+    calendar_query = """
+    query userCalendar($username: String!, $year: Int) {
+      matchedUser(username: $username) {
+        userCalendar(year: $year) {
+          streak
+          totalActiveDays
+          submissionCalendar
+        }
+      }
+    }"""
+    date_counts = {}
+    streak = 0
+    total_active_days = 0
+    for year in (now.year, now.year - 1):
+        data = graphql(calendar_query, {"username": username, "year": year}, cfg, auth=True)
+        cal = ((data.get("matchedUser") or {}).get("userCalendar")) or {}
+        raw = cal.get("submissionCalendar")
+        if raw:
+            for ts, count in json.loads(raw).items():
+                day = datetime.utcfromtimestamp(int(ts)).strftime("%Y-%m-%d")
+                date_counts[day] = date_counts.get(day, 0) + int(count)
+        if year == now.year:
+            streak = cal.get("streak") or 0
+            total_active_days = cal.get("totalActiveDays") or 0
 
-def parse_note_frontmatter(path):
-    with open(path) as f:
-        head = f.read(2000)
-    m = FRONTMATTER_RE.match(head)
-    if not m:
-        return None
-    fm = m.group(1)
-    date_m = re.search(r"^date:\s*(\d{4}-\d{2}-\d{2})", fm, re.MULTILINE)
-    diff_m = re.search(r"^difficulty:\s*(\w+)", fm, re.MULTILINE)
-    tags_m = re.search(r"^tags:\s*\[(.*?)\]", fm, re.MULTILINE)
+    stats_query = """
+    query userStats($username: String!) {
+      matchedUser(username: $username) {
+        submitStats { acSubmissionNum { difficulty count } }
+        tagProblemCounts {
+          advanced { tagName problemsSolved }
+          intermediate { tagName problemsSolved }
+          fundamental { tagName problemsSolved }
+        }
+      }
+    }"""
+    data = graphql(stats_query, {"username": username}, cfg, auth=True)
+    mu = data.get("matchedUser") or {}
+    ac = (mu.get("submitStats") or {}).get("acSubmissionNum") or []
+    diff_counts = {row["difficulty"]: row["count"] for row in ac}
+
+    tag_counts = Counter()
+    tpc = mu.get("tagProblemCounts") or {}
+    for bucket in ("fundamental", "intermediate", "advanced"):
+        for t in (tpc.get(bucket) or []):
+            if t.get("problemsSolved"):
+                tag_counts[t["tagName"]] += t["problemsSolved"]
+
     return {
-        "date": date_m.group(1) if date_m else None,
-        "difficulty": diff_m.group(1) if diff_m else None,
-        "tags": [t.strip() for t in tags_m.group(1).split(",") if t.strip()] if tags_m else [],
+        "date_counts": date_counts,
+        "streak": streak,
+        "total_active_days": total_active_days,
+        "diff_counts": diff_counts,
+        "tag_counts": tag_counts,
     }
 
 
-def collect_vault_notes(vault_dir):
-    notes = []
-    for root, dirs, files in os.walk(vault_dir):
-        dirs[:] = [d for d in dirs if d not in SKIP_DIRS]
-        for fname in files:
-            if fname.endswith(".md") and not fname.startswith("_"):
-                fm = parse_note_frontmatter(os.path.join(root, fname))
-                if fm and fm["date"]:
-                    notes.append(fm)
-    return notes
-
-
-def compute_streaks(date_counts):
+def compute_longest_streak(date_counts):
+    """LeetCode's API gives current streak + total active days directly,
+    but not longest streak -- derive that from the pulled calendar data."""
     if not date_counts:
-        return 0, 0
-    unique_dates = sorted(set(datetime.strptime(d, "%Y-%m-%d").date() for d in date_counts))
+        return 0
+    unique_dates = sorted(datetime.strptime(d, "%Y-%m-%d").date() for d in date_counts)
     longest = cur = 1
     for i in range(1, len(unique_dates)):
         if (unique_dates[i] - unique_dates[i - 1]).days == 1:
@@ -482,14 +518,7 @@ def compute_streaks(date_counts):
             longest = max(longest, cur)
         else:
             cur = 1
-    date_set = set(unique_dates)
-    today = datetime.now().date()
-    d = today if today in date_set else today - timedelta(days=1)
-    streak = 0
-    while d in date_set:
-        streak += 1
-        d -= timedelta(days=1)
-    return streak, longest
+    return longest
 
 
 def heatmap_color(count):
@@ -542,36 +571,41 @@ def render_heatmap_svg(date_counts, weeks=53):
     return "\n".join(svg)
 
 
-def regenerate_readme(vault_dir):
-    """Rebuild README.md + the heatmap SVG from whatever notes currently
-    exist in the vault. Pure local computation -- no network needed."""
-    notes = collect_vault_notes(vault_dir)
-    total = len(notes)
-    diff_counts = Counter(n["difficulty"] for n in notes if n["difficulty"])
-    tag_counts = Counter()
-    date_counts = Counter()
-    for n in notes:
-        tag_counts.update(n["tags"])
-        date_counts[n["date"]] += 1
+def regenerate_readme(vault_dir, cfg):
+    """Rebuild README.md + the heatmap SVG from your real LeetCode profile
+    stats (pulled live via GraphQL), not from what happens to be synced
+    into the vault."""
+    try:
+        stats = fetch_leetcode_profile_stats(cfg)
+    except SystemExit:
+        raise
+    except Exception as e:
+        print(f"WARNING: could not fetch LeetCode profile stats ({e}); "
+              f"leaving README/heatmap as-is.", file=sys.stderr)
+        return []
 
-    streak, longest = compute_streaks(date_counts)
+    date_counts = stats["date_counts"]
+    diff_counts = stats["diff_counts"]
+    tag_counts = stats["tag_counts"]
+    longest = compute_longest_streak(date_counts)
 
     heatmap_svg = render_heatmap_svg(date_counts)
     heatmap_rel = os.path.join(".leetcode-sync", "heatmap.svg")
     with open(os.path.join(vault_dir, heatmap_rel), "w") as f:
         f.write(heatmap_svg)
 
+    total = diff_counts.get("All", sum(v for k, v in diff_counts.items() if k != "All"))
     easy = diff_counts.get("Easy", 0)
     medium = diff_counts.get("Medium", 0)
     hard = diff_counts.get("Hard", 0)
+    streak = stats["streak"]
 
     top_tags = tag_counts.most_common(10)
-    tag_rows = "\n".join(f"| {t.replace('-', ' ').title()} | {c} |" for t, c in top_tags) \
-        or "| -- | -- |"
+    tag_rows = "\n".join(f"| {t} | {c} |" for t, c in top_tags) or "| -- | -- |"
 
     readme = f"""# LeetCode Progress
 
-_Auto-generated by `.leetcode-sync/sync.py` -- do not edit by hand, changes will be overwritten._
+_Auto-generated by `.leetcode-sync/sync.py` from your live LeetCode profile -- do not edit by hand, changes will be overwritten._
 
 **{total} problems solved** &nbsp;·&nbsp; {easy} Easy &nbsp;·&nbsp; {medium} Medium &nbsp;·&nbsp; {hard} Hard
 
@@ -588,7 +622,8 @@ _Auto-generated by `.leetcode-sync/sync.py` -- do not edit by hand, changes will
 | Medium | {medium} |
 | Hard | {hard} |
 | Current Streak | {streak} day{'s' if streak != 1 else ''} |
-| Longest Streak | {longest} day{'s' if longest != 1 else ''} |
+| Longest Streak (past ~2yr) | {longest} day{'s' if longest != 1 else ''} |
+| Total Active Days | {stats['total_active_days']} |
 
 ## Top Tags
 
@@ -663,7 +698,7 @@ def main():
         state["synced_ids"] = sorted(synced_ids)
         save_state(state)
 
-    readme_files = regenerate_readme(VAULT_DIR)
+    readme_files = regenerate_readme(VAULT_DIR, cfg)
     changed = new_files + readme_files
 
     git_sync(changed, VAULT_DIR)
