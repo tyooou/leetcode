@@ -9,15 +9,16 @@ What it does:
   2. Asks LeetCode's GraphQL API for your recent Accepted submissions.
   3. For any submission not yet synced (tracked in state.json), fetches the
      full problem statement + your submitted code.
-  4. Writes a markdown note into the vault root, matching the existing note
-     format ("Problem link / Difficulty / Date / Tags" header, Problem
-     Summary, Submission, then empty Reasoning/Notes/Complexity sections for
-     you to fill in by hand).
-  5. Skips any problem that already has a note file (never overwrites your
-     existing manual notes).
-  6. git add / commit / push (uses whatever git remote + stored credentials
-     are already configured in this repo -- this script never handles or
-     stores your GitHub token).
+  4. Writes a markdown note into YYYY/MM/, with Reasoning/Notes/Complexity
+     left blank ("*(fill in)*") unless anthropic_api_key is configured.
+  5. Skips any problem that already has a note file anywhere in the vault
+     (never overwrites your existing manual notes).
+  6. Regenerates README.md + the heatmap SVG from your live LeetCode
+     profile stats.
+  7. git add / commit ONLY -- deliberately does NOT push. The
+     leetcode-ai-annotate Cowork scheduled task runs later each night,
+     fills in any still-blank Reasoning/Complexity, and does the actual
+     push, so GitHub only ever sees the finished note.
 
 Exit codes: 0 = success (including "nothing new"), 1 = config/auth error.
 """
@@ -669,6 +670,12 @@ def regenerate_readme(vault_dir, cfg):
 
 
 def git_sync(paths, vault_dir):
+    """Commit ONLY -- deliberately does not push. The leetcode-ai-annotate
+    Cowork scheduled task runs after this each night, fills in
+    Reasoning/Complexity, and does the actual push once both steps are
+    done, so GitHub only ever sees the finished note, not a half-blank
+    one. If that task is ever disabled, commits will just queue up locally
+    until something pushes them."""
     if not paths:
         return
     try:
@@ -681,10 +688,9 @@ def git_sync(paths, vault_dir):
         msg = (f"LeetCode sync: {n_notes} new submission(s) ({datetime.now().strftime('%Y-%m-%d')})"
                if n_notes else f"Update README/heatmap ({datetime.now().strftime('%Y-%m-%d')})")
         subprocess.run(["git", "-C", vault_dir, "commit", "-m", msg], check=True)
-        subprocess.run(["git", "-C", vault_dir, "push"], check=True)
+        print("Committed locally (not pushed -- leetcode-ai-annotate pushes tonight).")
     except subprocess.CalledProcessError as e:
-        die(f"git step failed: {e}. Changes were written locally but "
-            f"NOT pushed -- push manually once fixed.")
+        die(f"git step failed: {e}.")
 
 
 def main():
