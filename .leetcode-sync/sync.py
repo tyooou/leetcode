@@ -10,7 +10,10 @@ What it does:
   3. For any submission not yet synced (tracked in state.json), fetches the
      full problem statement + your submitted code.
   4. Writes a markdown note into YYYY/MM/, with Reasoning/Notes/Complexity
-     left blank ("*(fill in)*") unless anthropic_api_key is configured.
+     always left blank ("*(fill in)*") -- the leetcode-ai-annotate Cowork
+     scheduled task fills in Reasoning/Complexity later that night using
+     Claude directly (no API key/billing needed). This script makes no AI
+     calls at all.
   5. Skips any problem that already has a note file anywhere in the vault
      (never overwrites your existing manual notes).
   6. Regenerates README.md + the heatmap SVG from your live LeetCode
@@ -42,9 +45,6 @@ GRAPHQL_URL = "https://leetcode.com/graphql"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
       "(KHTML, like Gecko) Chrome/124.0 Safari/537.36")
 
-ANTHROPIC_URL = "https://api.anthropic.com/v1/messages"
-ANTHROPIC_MODEL = "claude-haiku-4-5-20251001"
-
 LANG_EXT = {
     "python": "python", "python3": "python", "java": "java", "c": "c",
     "cpp": "cpp", "c++": "cpp", "csharp": "csharp", "javascript": "javascript",
@@ -71,10 +71,6 @@ def load_config():
                if not cfg.get(k) or cfg[k].startswith("PASTE_")]
     if missing:
         die(f"config.json is missing/unfilled values for: {', '.join(missing)}")
-    api_key = cfg.get("anthropic_api_key", "")
-    if not api_key or api_key.startswith("PASTE_"):
-        print("NOTE: no anthropic_api_key set -- Reasoning/Complexity will be "
-              "left blank for you to fill in by hand.")
     return cfg
 
 
@@ -168,72 +164,6 @@ def fetch_question(title_slug, cfg):
     if q is None:
         die(f"Could not fetch question data for '{title_slug}'.")
     return q
-
-
-def generate_analysis(question, code, fence_lang, cfg):
-    """Ask Claude for a short reasoning summary + time/space complexity.
-    Returns None (leaving the note sections blank) if no API key is
-    configured or the call/parse fails for any reason -- this is a nice-to-
-    have and must never break the sync."""
-    api_key = cfg.get("anthropic_api_key")
-    if not api_key or api_key.startswith("PASTE_"):
-        return None
-
-    summary = html_to_markdown(question.get("content", ""))[:1500]
-    prompt = f"""You are annotating a LeetCode solution for a personal study log.
-Given the problem and the accepted solution code below, respond with ONLY a
-JSON object (no markdown code fences, no commentary) with exactly these keys:
-- "reasoning_steps": an array of 2-5 short plain-English strings, each one
-  step of the approach used in the code. This becomes a numbered list, so
-  keep each step self-contained and specific to this code (not generic).
-- "key_insight": one punchy sentence (max ~20 words) naming the single core
-  trick or observation that makes this approach work -- the thing worth
-  remembering if you saw this problem again in six months.
-- "time_complexity": a short string like "O(n)"
-- "space_complexity": a short string like "O(1)"
-
-Problem: {question.get('title')} ({question.get('difficulty')})
-Problem summary:
-{summary}
-
-Submitted solution ({fence_lang}):
-{code}
-"""
-    body = json.dumps({
-        "model": ANTHROPIC_MODEL,
-        "max_tokens": 500,
-        "messages": [{"role": "user", "content": prompt}],
-    }).encode()
-    headers = {
-        "Content-Type": "application/json",
-        "x-api-key": api_key,
-        "anthropic-version": "2023-06-01",
-    }
-    req = urllib.request.Request(ANTHROPIC_URL, data=body, headers=headers, method="POST")
-    try:
-        with urllib.request.urlopen(req, timeout=30) as resp:
-            data = json.loads(resp.read().decode())
-    except urllib.error.HTTPError as e:
-        detail = e.read().decode(errors="replace")[:500]
-        print(f"WARNING: AI analysis failed: HTTP {e.code}: {detail}\n"
-              f"Leaving Reasoning/Complexity blank for you to fill in.", file=sys.stderr)
-        return None
-    except Exception as e:
-        print(f"WARNING: AI analysis request failed ({e}); leaving "
-              f"Reasoning/Complexity blank for you to fill in.", file=sys.stderr)
-        return None
-
-    try:
-        text = data["content"][0]["text"].strip()
-        text = re.sub(r"^```(?:json)?|```$", "", text, flags=re.MULTILINE).strip()
-        parsed = json.loads(text)
-        if not parsed.get("reasoning_steps"):
-            return None
-        return parsed
-    except Exception as e:
-        print(f"WARNING: AI response unparseable ({e}); raw response: "
-              f"{json.dumps(data)[:500]}\nLeaving Reasoning/Complexity blank.", file=sys.stderr)
-        return None
 
 
 def html_to_markdown(html):
@@ -716,10 +646,9 @@ def main():
             continue
 
         detail = fetch_submission_detail(sub["id"], cfg)
-        lang_name = (detail.get("lang") or {}).get("name", "").lower()
-        fence_lang = LANG_EXT.get(lang_name, lang_name or "text")
-        analysis = generate_analysis(question, detail.get("code", ""), fence_lang, cfg)
-        filename, body = build_note(question, detail, sub, cfg, analysis)
+        # Reasoning/Complexity are always left blank here -- the
+        # leetcode-ai-annotate Cowork task fills them in later tonight.
+        filename, body = build_note(question, detail, sub, cfg, analysis=None)
         path = os.path.join(VAULT_DIR, filename)
         os.makedirs(os.path.dirname(path), exist_ok=True)
         with open(path, "w") as f:
