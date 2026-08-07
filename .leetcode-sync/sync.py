@@ -33,7 +33,7 @@ import sys
 import urllib.request
 import urllib.error
 from collections import Counter
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from html import unescape
 
 VAULT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -398,7 +398,7 @@ def fetch_leetcode_profile_stats(cfg):
         raw = cal.get("submissionCalendar")
         if raw:
             for ts, count in json.loads(raw).items():
-                day = datetime.utcfromtimestamp(int(ts)).strftime("%Y-%m-%d")
+                day = datetime.fromtimestamp(int(ts), timezone.utc).strftime("%Y-%m-%d")
                 date_counts[day] = date_counts.get(day, 0) + int(count)
         if year == now.year:
             streak = cal.get("streak") or 0
@@ -626,9 +626,7 @@ def git_sync(paths, vault_dir):
         if diff.returncode == 0:
             print("Nothing changed -- skipping commit.")
             return
-        n_notes = sum(1 for p in paths if p not in ("README.md", os.path.join(".leetcode-sync", "heatmap.svg")))
-        msg = (f"LeetCode sync: {n_notes} new submission(s) ({datetime.now().strftime('%Y-%m-%d')})"
-               if n_notes else f"Update README/heatmap ({datetime.now().strftime('%Y-%m-%d')})")
+        msg = f"sync leetcode submissions - {datetime.now().strftime('%Y-%m-%d')}"
         subprocess.run(["git", "-C", vault_dir, "commit", "-m", msg], check=True)
         print("Committed locally (not pushed -- leetcode-ai-annotate pushes tonight).")
     except subprocess.CalledProcessError as e:
@@ -675,10 +673,6 @@ def main():
 
     readme_files = regenerate_readme(VAULT_DIR, cfg)
     changed = new_files + readme_files
-
-    git_sync(changed, VAULT_DIR)
-    if new_files:
-        print(f"Synced {len(new_files)} new note(s), updated README, and pushed to GitHub.")
 
 
 if __name__ == "__main__":

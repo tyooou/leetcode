@@ -69,26 +69,16 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "118. Pascal's Triangle.md",
+                "file": "2026/08/3345. Smallest Divisible Digit Product I.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "118. Pascal's Triangle"
-            }
-          },
-          {
-            "id": "3fe1fde96be4673c",
-            "type": "leaf",
-            "state": {
-              "type": "empty",
-              "state": {},
-              "icon": "lucide-file",
-              "title": "New tab"
+              "title": "3345. Smallest Divisible Digit Product I"
             }
           }
         ],
-        "currentTab": 5
+        "currentTab": 4
       }
     ],
     "direction": "vertical"
@@ -236,15 +226,18 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "3fe1fde96be4673c",
+  "active": "be4e9b3f27ad0afc",
   "lastOpenFiles": [
-    "README.md",
+    "2026/08/3348. Smallest Divisible Digit Product II.md",
+    "2026/08/3731. Find Missing Elements.md",
+    "2026/08/1406. Stone Game III.md",
+    "2026/08/3345. Smallest Divisible Digit Product I.md",
     "2026/08/3310. Remove Methods From Project.md",
+    "README.md",
     "3838. Weighted Word Mapping.md",
     "2026/08/877. Stone Game.md",
     "2026/08/486. Predict the Winner.md",
     "2026/06/3838. Weighted Word Mapping.md",
-    "2026/08/3731. Find Missing Elements.md",
     "2026/06/3691. Maximum Total Subarray Value II.md",
     "2026/06/3689. Maximum Total Subarray Value I.md",
     "2026/06/3612. Process String with Special Operations I.md",
@@ -261,11 +254,8 @@
     "2025/08/1323. Maximum 69 Numbered.md",
     "2025/08",
     "2025",
-    "2026/08/1406. Stone Game III.md",
     "2026/07/1331. Rank Transform of an Array.md",
     "2026/06/1833. Maximum Ice Cream Bars.md",
-    "2026/06/1732. Find the Highest Altitude.md",
-    "2026/06/1189. Maximum Number of Balloons.md",
     "2026/08",
     "2026/07",
     "2026/06",
