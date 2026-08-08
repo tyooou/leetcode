@@ -8,7 +8,7 @@
     <key>ProgramArguments</key>
     <array>
         <string>/usr/bin/python3</string>
-        <string>/Users/tylerhyoung/Documents/leetcode/.leetcode-sync/sync.py</string>
+        <string>/Users/tylerhyoung/dev/leetcode/.leetcode-sync/sync.py</string>
     </array>
 
     <key>StartCalendarInterval</key>
@@ -20,10 +20,10 @@
     </dict>
 
     <key>StandardOutPath</key>
-    <string>/Users/tylerhyoung/Documents/leetcode/.leetcode-sync/sync.log</string>
+    <string>/Users/tylerhyoung/dev/leetcode/.leetcode-sync/sync.log</string>
 
     <key>StandardErrorPath</key>
-    <string>/Users/tylerhyoung/Documents/leetcode/.leetcode-sync/sync.log</string>
+    <string>/Users/tylerhyoung/dev/leetcode/.leetcode-sync/sync.log</string>
 
     <key>RunAtLoad</key>
     <false/>
