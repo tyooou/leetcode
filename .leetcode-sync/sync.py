@@ -18,17 +18,16 @@ What it does:
      (never overwrites your existing manual notes).
   6. Regenerates README.md + the heatmap SVG from your live LeetCode
      profile stats.
-  7. git add / commit ONLY -- deliberately does NOT push. The
-     leetcode-ai-annotate Cowork scheduled task runs later each night,
-     fills in any still-blank Reasoning/Complexity, and does the actual
-     push, so GitHub only ever sees the finished note.
+  7. Leaves everything uncommitted -- this script makes no git calls at
+     all. The leetcode-ai-annotate Cowork scheduled task runs later each
+     night, fills in any still-blank Reasoning/Complexity, and does the
+     git add / commit / push, so GitHub only ever sees the finished note.
 
 Exit codes: 0 = success (including "nothing new"), 1 = config/auth error.
 """
 import json
 import os
 import re
-import subprocess
 import sys
 import urllib.request
 import urllib.error
@@ -592,10 +591,10 @@ def regenerate_readme(vault_dir, cfg):
     readme_path = os.path.join(vault_dir, "README.md")
 
     # The "Last updated" timestamp changes on every run even when nothing
-    # else did, which would otherwise defeat git_sync's "nothing changed"
-    # check and spam a new commit daily. Only actually rewrite the file
-    # (and thus let it show up as a git change) if the content differs
-    # once that timestamp line is ignored.
+    # else did, which would otherwise show up as a spurious daily diff for
+    # whatever commits this later. Only actually rewrite the file (and
+    # thus let it show up as a git change) if the content differs once
+    # that timestamp line is ignored.
     def strip_timestamp(text):
         return re.sub(r"Last updated: \d{4}-\d{2}-\d{2} \d{2}:\d{2}", "Last updated: X", text)
 
@@ -609,28 +608,6 @@ def regenerate_readme(vault_dir, cfg):
         f.write(readme)
 
     return ["README.md", heatmap_rel]
-
-
-def git_sync(paths, vault_dir):
-    """Commit ONLY -- deliberately does not push. The leetcode-ai-annotate
-    Cowork scheduled task runs after this each night, fills in
-    Reasoning/Complexity, and does the actual push once both steps are
-    done, so GitHub only ever sees the finished note, not a half-blank
-    one. If that task is ever disabled, commits will just queue up locally
-    until something pushes them."""
-    if not paths:
-        return
-    try:
-        subprocess.run(["git", "-C", vault_dir, "add"] + paths, check=True)
-        diff = subprocess.run(["git", "-C", vault_dir, "diff", "--cached", "--quiet"])
-        if diff.returncode == 0:
-            print("Nothing changed -- skipping commit.")
-            return
-        msg = f"sync leetcode submissions - {datetime.now().strftime('%Y-%m-%d')}"
-        subprocess.run(["git", "-C", vault_dir, "commit", "-m", msg], check=True)
-        print("Committed locally (not pushed -- leetcode-ai-annotate pushes tonight).")
-    except subprocess.CalledProcessError as e:
-        die(f"git step failed: {e}.")
 
 
 def main():
