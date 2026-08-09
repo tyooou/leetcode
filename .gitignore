@@ -3,3 +3,4 @@
 .DS_Store
 .leetcode-sync/__pycache__/
 .leetcode-sync/sync.log
+.leetcode-sync/push.log
