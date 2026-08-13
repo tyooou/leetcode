@@ -15,13 +15,8 @@
     <key>WorkingDirectory</key>
     <string>/Users/tylerhyoung/dev/leetcode</string>
 
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>12</integer>
-        <key>Minute</key>
-        <integer>15</integer>
-    </dict>
+    <key>StartInterval</key>
+    <integer>1800</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/tylerhyoung/dev/leetcode/.leetcode-sync/push.log</string>

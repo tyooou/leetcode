@@ -10,20 +10,26 @@ What it does:
   3. For any submission not yet synced (tracked in state.json), fetches the
      full problem statement + your submitted code.
   4. Writes a markdown note into YYYY/MM/, with Reasoning/Notes/Complexity
-     always left blank ("*(fill in)*") -- the leetcode-ai-annotate Cowork
-     scheduled task fills in Reasoning/Complexity later that night using
-     Claude directly (no API key/billing needed). This script makes no AI
-     calls at all.
+     always left blank ("*(fill in)*") -- a separate leetcode-ai-annotate
+     task fills in Reasoning/Complexity later using Claude directly (no
+     API key/billing needed). This script makes no AI calls at all.
   5. Skips any problem that already has a note file anywhere in the vault
      (never overwrites your existing manual notes).
   6. Regenerates README.md + the heatmap SVG from your live LeetCode
      profile stats.
   7. Leaves everything uncommitted -- this script makes no git calls at
-     all. The leetcode-ai-annotate Cowork scheduled task runs later each
-     night, fills in any still-blank Reasoning/Complexity, and does the
-     git add / commit / push, so GitHub only ever sees the finished note.
+     all. The separate leetcode-push launchd agent commits and pushes
+     whatever's on disk once it's actually online.
 
-Exit codes: 0 = success (including "nothing new"), 1 = config/auth error.
+Run cadence: launchd polls this script frequently (see
+com.tyou.leetcode-sync.plist's StartInterval) so it catches whatever
+moment the Mac is actually awake and online, rather than a fixed clock
+time that might land during a networkless Power Nap. See
+synced_too_recently() -- once a poll succeeds, further polls no-op until
+MIN_HOURS_BETWEEN_SYNCS has passed.
+
+Exit codes: 0 = success (including "nothing new" or skipped as too
+recent), 1 = config/auth error.
 """
 import json
 import os
@@ -39,6 +45,8 @@ VAULT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SYNC_DIR = os.path.join(VAULT_DIR, ".leetcode-sync")
 CONFIG_PATH = os.path.join(SYNC_DIR, "config.json")
 STATE_PATH = os.path.join(SYNC_DIR, "state.json")
+LAST_SYNC_PATH = os.path.join(SYNC_DIR, ".last_sync")
+MIN_HOURS_BETWEEN_SYNCS = 24
 
 GRAPHQL_URL = "https://leetcode.com/graphql"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -83,6 +91,24 @@ def load_state():
 def save_state(state):
     with open(STATE_PATH, "w") as f:
         json.dump(state, f, indent=2)
+
+
+def synced_too_recently():
+    """launchd polls this script frequently (see .leetcode-sync/*.plist) so
+    it can catch whatever moment the Mac is actually awake and online,
+    rather than a fixed clock time that might land during a networkless
+    Power Nap. This guard keeps that frequent polling from re-fetching
+    more than once a day once a poll has succeeded."""
+    if not os.path.exists(LAST_SYNC_PATH):
+        return False
+    with open(LAST_SYNC_PATH) as f:
+        last = datetime.fromisoformat(f.read().strip())
+    return datetime.now() - last < timedelta(hours=MIN_HOURS_BETWEEN_SYNCS)
+
+
+def mark_synced():
+    with open(LAST_SYNC_PATH, "w") as f:
+        f.write(datetime.now().isoformat())
 
 
 def graphql(query, variables, cfg, auth=False):
@@ -611,6 +637,10 @@ def regenerate_readme(vault_dir, cfg):
 
 
 def main():
+    if synced_too_recently():
+        print(f"Already synced within the last {MIN_HOURS_BETWEEN_SYNCS}h -- skipping.")
+        return
+
     cfg = load_config()
     state = load_state()
     synced_ids = set(state.get("synced_ids", []))
@@ -634,7 +664,7 @@ def main():
 
         detail = fetch_submission_detail(sub["id"], cfg)
         # Reasoning/Complexity are always left blank here -- the
-        # leetcode-ai-annotate Cowork task fills them in later tonight.
+        # leetcode-ai-annotate task fills them in later.
         filename, body = build_note(question, detail, sub, cfg, analysis=None)
         path = os.path.join(VAULT_DIR, filename)
         os.makedirs(os.path.dirname(path), exist_ok=True)
@@ -650,6 +680,8 @@ def main():
 
     readme_files = regenerate_readme(VAULT_DIR, cfg)
     changed = new_files + readme_files
+
+    mark_synced()
 
 
 if __name__ == "__main__":

@@ -11,13 +11,8 @@
         <string>/Users/tylerhyoung/dev/leetcode/.leetcode-sync/sync.py</string>
     </array>
 
-    <key>StartCalendarInterval</key>
-    <dict>
-        <key>Hour</key>
-        <integer>12</integer>
-        <key>Minute</key>
-        <integer>0</integer>
-    </dict>
+    <key>StartInterval</key>
+    <integer>1800</integer>
 
     <key>StandardOutPath</key>
     <string>/Users/tylerhyoung/dev/leetcode/.leetcode-sync/sync.log</string>
