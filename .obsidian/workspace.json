@@ -90,9 +90,21 @@
               "icon": "lucide-file",
               "title": "3302. Find the Lexicographically Smallest Valid Sequence"
             }
+          },
+          {
+            "id": "87ea5c1f901287c8",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.13.7"
+              },
+              "icon": "lucide-book-up",
+              "title": "Release Notes 1.13.7"
+            }
           }
         ],
-        "currentTab": 5
+        "currentTab": 6
       }
     ],
     "direction": "vertical"
@@ -242,7 +254,7 @@
       "command-palette:Open command palette": false
     }
   },
-  "active": "89ea271245fbb9ac",
+  "active": "87ea5c1f901287c8",
   "lastOpenFiles": [
     "2026/08/3348. Smallest Divisible Digit Product II.md",
     "2026/08/3345. Smallest Divisible Digit Product I.md",
