@@ -28,12 +28,20 @@ time that might land during a networkless Power Nap. See
 synced_too_recently() -- once a poll succeeds, further polls no-op until
 MIN_HOURS_BETWEEN_SYNCS has passed.
 
+Session cookies (leetcode_session / leetcode_csrftoken) are refreshed by
+hand in config.json -- LeetCode's Cloudflare check blocks automated
+browser logins (tried Playwright/Chromium and Playwright/WebKit, both got
+flagged). When the cookie expires, notify_cookie_expired() fires a macOS
+notification so it gets noticed the same day instead of buried in
+sync.log.
+
 Exit codes: 0 = success (including "nothing new" or skipped as too
 recent), 1 = config/auth error.
 """
 import json
 import os
 import re
+import subprocess
 import sys
 import urllib.request
 import urllib.error
@@ -47,6 +55,8 @@ CONFIG_PATH = os.path.join(SYNC_DIR, "config.json")
 STATE_PATH = os.path.join(SYNC_DIR, "state.json")
 LAST_SYNC_PATH = os.path.join(SYNC_DIR, ".last_sync")
 MIN_HOURS_BETWEEN_SYNCS = 24
+LAST_COOKIE_NOTIFY_PATH = os.path.join(SYNC_DIR, ".last_cookie_notify")
+COOKIE_NOTIFY_COOLDOWN_HOURS = 6
 
 GRAPHQL_URL = "https://leetcode.com/graphql"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -66,6 +76,26 @@ LANG_EXT = {
 def die(msg, code=1):
     print(f"ERROR: {msg}", file=sys.stderr)
     sys.exit(code)
+
+
+def notify_cookie_expired():
+    """Cookie refresh is manual (see config.json) -- this just makes sure
+    you find out the same day instead of days later in a log file no one's
+    tailing. Cooldown keeps a stuck cookie from re-notifying every 30-min
+    poll until you actually refresh it."""
+    if os.path.exists(LAST_COOKIE_NOTIFY_PATH):
+        with open(LAST_COOKIE_NOTIFY_PATH) as f:
+            last = datetime.fromisoformat(f.read().strip())
+        if datetime.now() - last < timedelta(hours=COOKIE_NOTIFY_COOLDOWN_HOURS):
+            return
+    subprocess.run([
+        "osascript", "-e",
+        'display notification "Refresh leetcode_session / leetcode_csrftoken '
+        'in .leetcode-sync/config.json" with title '
+        '"LeetCode sync: cookie expired" sound name "Basso"'
+    ])
+    with open(LAST_COOKIE_NOTIFY_PATH, "w") as f:
+        f.write(datetime.now().isoformat())
 
 
 def load_config():
@@ -167,6 +197,7 @@ def fetch_submission_detail(sub_id, cfg):
     data = graphql(query, {"submissionId": int(sub_id)}, cfg, auth=True)
     detail = data.get("submissionDetails")
     if detail is None:
+        notify_cookie_expired()
         die("Could not read submission details -- your LEETCODE_SESSION / "
             "csrftoken cookie is likely expired. Refresh it in config.json.")
     return detail
