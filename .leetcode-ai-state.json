@@ -1,8 +1,11 @@
 {
-  "last_scan_date": "2026-09-14",
+  "last_scan_date": "2026-09-15",
   "last_scan_time": "automated_run",
   "scanned_folders": ["2026/09", "2026/08", "2026/07", "2026/06", "2026/05", "2026/04", "2026/03", "2026/02", "2026/01", "2025", "2024"],
-  "files_updated": 0,
-  "updated_files": [],
-  "notes": "2026-09-14: Scanned all folders (2026/01-09, 2025, 2024). No files with blank Reasoning or Complexity sections found. All annotations from previous runs are complete."
+  "files_updated": 2,
+  "updated_files": [
+    "2026/09/3414. Maximum Score of Non-overlapping Intervals.md",
+    "2026/09/835. Image Overlap.md"
+  ],
+  "notes": "2026-09-15: Found 2 new files with blank Reasoning and Complexity sections. Updated both files with detailed reasoning steps and complexity analysis (O(n² log n), O(n) and O(k²), O(n²) respectively)."
 }
