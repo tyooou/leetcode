@@ -1,8 +1,11 @@
 {
-  "last_scan_date": "2026-09-25",
+  "last_scan_date": "2026-09-26",
   "last_scan_time": "automated_run",
   "scanned_folders": ["2026/09", "2026/08", "2026/07", "2026/06", "2026/05", "2026/04", "2026/03", "2026/02", "2026/01", "2025", "2024"],
-  "files_updated": 0,
-  "updated_files": [],
-  "notes": "2026-09-25 (scheduled): Scanned 2026/09 folder (23 files total). All Reasoning and Complexity sections already filled. No updates needed."
+  "files_updated": 2,
+  "updated_files": [
+    "2026/09/1658. Minimum Operations to Reduce X to Zero.md",
+    "2026/09/3550. Smallest Index With Digit Sum Equal to Index.md"
+  ],
+  "notes": "2026-09-26 (scheduled): Scanned 2026/09 folder. Found 2 files modified since last scan; filled Reasoning and Complexity sections."
 }
