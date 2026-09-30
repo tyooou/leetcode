@@ -1,14 +1,17 @@
 {
-  "last_scan_date": "2026-09-30",
+  "last_scan_date": "2026-10-01",
   "last_scan_time": "automated_run",
-  "scanned_folders": ["2026/09", "2026/08", "2026/07", "2026/06", "2026/05", "2026/04", "2026/03", "2026/02", "2026/01", "2025", "2024"],
-  "files_updated": 5,
+  "scanned_folders": ["2026/10", "2026/09", "2026/08", "2026/07", "2026/06", "2026/05", "2026/04", "2026/03", "2026/02", "2026/01", "2025", "2024"],
+  "files_updated": 8,
   "updated_files": [
     "2026/09/1658. Minimum Operations to Reduce X to Zero.md",
     "2026/09/3550. Smallest Index With Digit Sum Equal to Index.md",
     "2026/09/1096. Brace Expansion II.md",
     "2026/09/1807. Evaluate the Bracket Pairs of a String.md",
-    "2026/09/1614. Maximum Nesting Depth of the Parentheses.md"
+    "2026/09/1614. Maximum Nesting Depth of the Parentheses.md",
+    "2026/09/1111. Maximum Nesting Depth of Two Valid Parentheses Strings.md",
+    "2026/09/2267. Check if There Is a Valid Parentheses String Path.md",
+    "2026/09/1190. Reverse Substrings Between Each Pair of Parentheses.md"
   ],
-  "notes": "2026-09-30 (scheduled): Scanned all folders (2026/09 through 2024). Zero new blank sections found. All previously processed files retain their annotations. Cumulative total: 5 files updated."
+  "notes": "2026-10-01 (scheduled): Found 3 new files with blank sections. Filled Reasoning (4 steps + key insight) and Complexity (Time/Space) for all. Cumulative total: 8 files updated."
 }
