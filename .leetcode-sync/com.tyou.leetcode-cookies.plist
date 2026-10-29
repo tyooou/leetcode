@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>Label</key>
+    <string>com.tyou.leetcode-cookies</string>
+
+    <key>ProgramArguments</key>
+    <array>
+        <string>/Users/tylerhyoung/Library/Application Support/leetcode-sync/bin/leetcode-cookie-helper</string>
+    </array>
+
+    <key>WatchPaths</key>
+    <array>
+        <string>/Users/tylerhyoung/Library/Containers/com.apple.Safari/Data/Library/Cookies</string>
+    </array>
+
+    <key>ThrottleInterval</key>
+    <integer>30</integer>
+
+    <key>StandardErrorPath</key>
+    <string>/Users/tylerhyoung/dev/leetcode/.leetcode-sync/cookie-helper.log</string>
+
+    <key>RunAtLoad</key>
+    <true/>
+
+    <key>ProcessType</key>
+    <string>Background</string>
+
+    <key>LowPriorityIO</key>
+    <true/>
+</dict>
+</plist>

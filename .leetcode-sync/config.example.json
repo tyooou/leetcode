@@ -1,5 +1,3 @@
 {
-  "leetcode_username": "PASTE_YOUR_LEETCODE_USERNAME",
-  "leetcode_session": "PASTE_LEETCODE_SESSION_COOKIE_VALUE",
-  "leetcode_csrftoken": "PASTE_CSRFTOKEN_COOKIE_VALUE"
+  "leetcode_username": "PASTE_YOUR_LEETCODE_USERNAME"
 }

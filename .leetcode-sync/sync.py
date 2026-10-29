@@ -28,11 +28,14 @@ time that might land during a networkless Power Nap. See
 synced_too_recently() -- once a poll succeeds, further polls no-op until
 MIN_HOURS_BETWEEN_SYNCS has passed.
 
-Session cookies (leetcode_session / leetcode_csrftoken) are refreshed by
-hand in config.json -- LeetCode's Cloudflare check blocks automated
-browser logins (tried Playwright/Chromium and Playwright/WebKit, both got
-flagged). When the cookie expires, notify_cookie_expired() fires a macOS
-notification so it gets noticed the same day instead of buried in
+Session cookies (LEETCODE_SESSION / csrftoken) live in the login Keychain,
+not config.json. LeetCode's Cloudflare check blocks automated browser
+logins (tried Playwright/Chromium and Playwright/WebKit, both got
+flagged), so instead leetcode-cookie-helper (cookie-helper/main.swift, run
+by com.tyou.leetcode-cookies.plist) copies them out of Safari whenever
+Safari's cookie jar changes -- logging in to leetcode.com in Safari is the
+whole refresh. When the cookie expires, notify_cookie_expired() fires a
+macOS notification so it gets noticed the same day instead of buried in
 sync.log.
 
 Exit codes: 0 = success (including "nothing new" or skipped as too
@@ -57,6 +60,10 @@ LAST_SYNC_PATH = os.path.join(SYNC_DIR, ".last_sync")
 MIN_HOURS_BETWEEN_SYNCS = 24
 LAST_COOKIE_NOTIFY_PATH = os.path.join(SYNC_DIR, ".last_cookie_notify")
 COOKIE_NOTIFY_COOLDOWN_HOURS = 6
+KEYCHAIN_SERVICE = "com.tyou.leetcode-sync"
+# config key -> Keychain account, as written by leetcode-cookie-helper.
+KEYCHAIN_COOKIES = {"leetcode_session": "LEETCODE_SESSION",
+                    "leetcode_csrftoken": "csrftoken"}
 
 GRAPHQL_URL = "https://leetcode.com/graphql"
 UA = ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
@@ -79,10 +86,10 @@ def die(msg, code=1):
 
 
 def notify_cookie_expired():
-    """Cookie refresh is manual (see config.json) -- this just makes sure
+    """Refreshing still takes a manual Safari login -- this just makes sure
     you find out the same day instead of days later in a log file no one's
     tailing. Cooldown keeps a stuck cookie from re-notifying every 30-min
-    poll until you actually refresh it."""
+    poll until you actually log in (leetcode-cookie-helper clears it)."""
     if os.path.exists(LAST_COOKIE_NOTIFY_PATH):
         with open(LAST_COOKIE_NOTIFY_PATH) as f:
             last = datetime.fromisoformat(f.read().strip())
@@ -90,12 +97,27 @@ def notify_cookie_expired():
             return
     subprocess.run([
         "osascript", "-e",
-        'display notification "Refresh leetcode_session / leetcode_csrftoken '
-        'in .leetcode-sync/config.json" with title '
+        'display notification "Log in to leetcode.com in Safari -- the new '
+        'cookie is picked up automatically" with title '
         '"LeetCode sync: cookie expired" sound name "Basso"'
     ])
     with open(LAST_COOKIE_NOTIFY_PATH, "w") as f:
         f.write(datetime.now().isoformat())
+
+
+def keychain_cookie(account):
+    """Read a cookie leetcode-cookie-helper stored in the login Keychain.
+    The first read pops a macOS prompt for `security` -- click Always
+    Allow. Returns None if there's no item yet (helper hasn't run)."""
+    try:
+        result = subprocess.run(
+            ["/usr/bin/security", "find-generic-password",
+             "-s", KEYCHAIN_SERVICE, "-a", account, "-w"],
+            capture_output=True, text=True, timeout=120)
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    value = result.stdout.strip()
+    return value if result.returncode == 0 and value else None
 
 
 def load_config():
@@ -104,10 +126,25 @@ def load_config():
             f"to config.json and fill in your values.")
     with open(CONFIG_PATH) as f:
         cfg = json.load(f)
-    missing = [k for k in ("leetcode_username", "leetcode_session", "leetcode_csrftoken")
-               if not cfg.get(k) or cfg[k].startswith("PASTE_")]
+    if not cfg.get("leetcode_username") or cfg["leetcode_username"].startswith("PASTE_"):
+        die("config.json is missing/unfilled values for: leetcode_username")
+
+    missing = []
+    for key, account in KEYCHAIN_COOKIES.items():
+        value = keychain_cookie(account)
+        if value:
+            cfg[key] = value
+        elif cfg.get(key) and not cfg[key].startswith("PASTE_"):
+            # Pre-Keychain config.json -- still works, but should go.
+            print(f"WARNING: {key} read from config.json; once "
+                  f"leetcode-cookie-helper has run, delete it from there.",
+                  file=sys.stderr)
+        else:
+            missing.append(account)
     if missing:
-        die(f"config.json is missing/unfilled values for: {', '.join(missing)}")
+        notify_cookie_expired()
+        die(f"No {', '.join(missing)} cookie in the Keychain -- log in to "
+            f"leetcode.com in Safari so leetcode-cookie-helper picks it up.")
     return cfg
 
 
@@ -199,7 +236,8 @@ def fetch_submission_detail(sub_id, cfg):
     if detail is None:
         notify_cookie_expired()
         die("Could not read submission details -- your LEETCODE_SESSION / "
-            "csrftoken cookie is likely expired. Refresh it in config.json.")
+            "csrftoken cookie is likely expired. Log in to leetcode.com in "
+            "Safari to refresh it.")
     return detail
 
 
